@@ -5,6 +5,8 @@ OpenStreetMap (OSM) data
 Author: Chris Harris
 """
 
+import matplotlib.pyplot as plt
+import numpy as np
 import requests
 
 class MapReader:
@@ -31,7 +33,7 @@ class MapReader:
             {roi};
         relation["{feature}"]
             {roi};
-        )
+        );
         (._;>;);
         out center;
         """
@@ -44,3 +46,35 @@ class MapReader:
         response = requests.get(self._overpass_url, params={"data": query}, timeout=timeout)
         response_data = response.json()
         return response_data
+
+    def plot_response_data(self, response_data: dict) -> None:
+        """
+        Plot the lat/long of each node, nodes in ways and nodes in relations
+        """
+        lat_lon = self._get_lat_lon(response_data)
+        latitudes, longitudes = lat_lon[:, 1], lat_lon[:, 0]
+
+        plt.plot(longitudes, latitudes, "o")
+        plt.xlabel("Longitude")
+        plt.ylabel("Latitude")
+        plt.axis("equal")
+        plt.show()
+
+    def _get_lat_lon(self, response_data: dict) -> np.array:
+        """
+        Get the lat/lon of each node, nodes in ways and nodes in relations
+        """
+        coords = []
+
+        for element in response_data["elements"]:
+            if element["type"] == "node":
+                lat = element["lat"]
+                lon = element["lon"]
+                coords.append((lat, lon))
+
+            if "center" in element:
+                lat = element["center"]["lat"]
+                lon = element["center"]["lon"]
+                coords.append((lat, lon))
+
+        return np.array(coords)
