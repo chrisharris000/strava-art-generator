@@ -15,8 +15,9 @@ class MapReader:
     """
     def __init__(self):
         self._overpass_url = "http://overpass-api.de/api/interpreter"
+        self._step_size = 10
 
-    def _get_highway_data_from_bbox(self, south_latitude: float, west_longitude: float,
+    def get_highway_data_from_bbox(self, south_latitude: float, west_longitude: float,
                                     north_latitude: float, east_longitude: float) -> dict:
         """
         Return all OSM nodes, ways and relations within the box defined by the latitudes/longitudes.
@@ -52,7 +53,7 @@ class MapReader:
         Plot the lat/long of each node, nodes in ways and nodes in relations
         """
         lat_lon = self._get_lat_lon(response_data)
-        latitudes, longitudes = lat_lon[:, 1], lat_lon[:, 0]
+        latitudes, longitudes = lat_lon[:, 0], lat_lon[:, 1]
 
         plt.plot(longitudes, latitudes, "o")
         plt.xlabel("Longitude")
@@ -78,3 +79,26 @@ class MapReader:
                 coords.append((lat, lon))
 
         return np.array(coords)
+    
+    def _interpolate_nodes(self, response_data: dict) -> dict:
+        """
+        Since OSM ways are defined by straight lines between consecutive nodes, it is possible
+        that for long straight sections, there are no nodes for a significant distance, which makes
+        it difficult to find the shape of the way visually.
+
+        This method adds additional nodes space `_step_size` apart to fill in straight ways.
+        """
+
+    @property
+    def step_size(self):
+        """
+        Get the step size to be used between consecutive nodes
+        """
+        return self._step_size
+
+    @step_size.setter
+    def step_size(self, new_step_size: float):
+        """
+        Set the step size to be used between consecutive nodes
+        """
+        self._step_size = new_step_size
