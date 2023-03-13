@@ -46,7 +46,7 @@ class MapReader:
         Get the save location for any overpass results
         """
         return self._save_location
-    
+
     @save_location.setter
     def save_location(self, new_save_location: str) -> None:
         """
@@ -81,17 +81,18 @@ class MapReader:
         self._overpass_result = self._query_overpass(query)
 
         if write_to_file:
-            with open(self.save_location, "w") as f:
-                json.dump(self._overpass_result, f)
+            json_object = json.dumps(self._overpass_result, indent=4)
+            with open(self.save_location / "osm-output.json", "w", encoding="utf8") as output:
+                output.write(json_object)
 
     def get_highway_data_from_file(self, file_location: Path) -> None:
         """
         Read json formatted overpass result from saved file
         """
-        with open(file_location) as f:
-            self._overpass_result = json.load(f)
+        with open(file_location, "r", encoding="utf8") as input_file:
+            self._overpass_result = json.load(input_file)
 
-    def interpolate_nodes(self) -> None:
+    def interpolate_nodes(self, write_to_file: bool=False) -> None:
         """
         Since OSM ways are defined by straight lines between consecutive nodes, it is possible
         that for long straight sections, there are no nodes for a significant distance, which makes
@@ -161,14 +162,21 @@ class MapReader:
             for element in modified_overpass_result["elements"]:
                 if element["id"] == way_id:
                     element["nodes"] = new_way_nodes
-            self._overpass_result = modified_overpass_result
+
+        self._overpass_result = modified_overpass_result
+
+        if write_to_file:
+            json_object = json.dumps(self._overpass_result, indent=4)
+            with open(self.save_location / "osm-interpolated-output.json", "w", encoding="utf8") \
+                as output:
+                output.write(json_object)
 
     def plot_response_data(self) -> None:
         """
         Plot the lat/long of each node, nodes in ways and nodes in relations
         """
         lat_lon = []
-        for node, pair in self._node_coordinates.items():
+        for _node, pair in self._node_coordinates.items():
             lat_lon.append(pair)
         lat_lon = np.array(lat_lon)
         latitudes, longitudes = lat_lon[:, 0], lat_lon[:, 1]
@@ -223,7 +231,8 @@ def distance(a_lat_lon: tuple[float], b_lat_lon: tuple[float]) -> float:
 
 if __name__ == "__main__":
     reader = MapReader()
-    reader.get_highway_data_from_bbox(-33.83842,150.93879,-33.83621,150.94294, write_to_file=True)
+    data_file = Path.home() / "strava-art-generator" / "osm-data" / "osm-output.json"
+    reader.get_highway_data_from_file(data_file)
     print(len(reader._overpass_result["elements"]))
     reader.interpolate_nodes()
     print(len(reader._overpass_result["elements"]))
