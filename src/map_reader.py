@@ -5,7 +5,10 @@ OpenStreetMap (OSM) data
 Author: Chris Harris
 """
 
+import json
+
 from math import sqrt
+from pathlib import Path
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -17,28 +20,44 @@ class MapReader:
     """
     def __init__(self):
         self._overpass_url = "http://overpass-api.de/api/interpreter"
-        self._step_size = 0.00055
+        self._step_size = 0.001
         self._overpass_result = {}
         self._node_coordinates = {}
+        self._save_location = Path.home() / "strava-art-generator" / "osm-data"
 
     # Getter/setters
     @property
-    def step_size(self):
+    def step_size(self) -> float:
         """
         Get the step size to be used between consecutive nodes
         """
         return self._step_size
 
     @step_size.setter
-    def step_size(self, new_step_size: float):
+    def step_size(self, new_step_size: float) -> None:
         """
         Set the step size to be used between consecutive nodes
         """
         self._step_size = new_step_size
 
+    @property
+    def save_location(self) -> str:
+        """
+        Get the save location for any overpass results
+        """
+        return self._save_location
+    
+    @save_location.setter
+    def save_location(self, new_save_location: str) -> None:
+        """
+        Set the new save location for any overpass results
+        """
+        self._save_location = new_save_location
+
     # Public methods
     def get_highway_data_from_bbox(self, south_latitude: float, west_longitude: float,
-                                    north_latitude: float, east_longitude: float) -> None:
+                                    north_latitude: float, east_longitude: float,
+                                    write_to_file: bool=False) -> None:
         """
         Queries all OSM nodes, ways and relations within the box defined by the latitudes/longitudes
         """
@@ -60,6 +79,17 @@ class MapReader:
         out skel qt;
         """
         self._overpass_result = self._query_overpass(query)
+
+        if write_to_file:
+            with open(self.save_location, "w") as f:
+                json.dump(self._overpass_result, f)
+
+    def get_highway_data_from_file(self, file_location: Path) -> None:
+        """
+        Read json formatted overpass result from saved file
+        """
+        with open(file_location) as f:
+            self._overpass_result = json.load(f)
 
     def interpolate_nodes(self) -> None:
         """
@@ -150,7 +180,7 @@ class MapReader:
         plt.show()
 
     # Private methods
-    def _query_overpass(self, query: str, timeout=30) -> dict:
+    def _query_overpass(self, query: str, timeout: int=30) -> dict:
         """
         Send query to Overpass API and return json formatted result
         """
@@ -193,7 +223,7 @@ def distance(a_lat_lon: tuple[float], b_lat_lon: tuple[float]) -> float:
 
 if __name__ == "__main__":
     reader = MapReader()
-    reader.get_highway_data_from_bbox(-33.837383,150.925664,-33.817704,150.962521)
+    reader.get_highway_data_from_bbox(-33.83842,150.93879,-33.83621,150.94294, write_to_file=True)
     print(len(reader._overpass_result["elements"]))
     reader.interpolate_nodes()
     print(len(reader._overpass_result["elements"]))
