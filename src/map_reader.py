@@ -233,6 +233,15 @@ def distance(a_lat_lon: tuple[float], b_lat_lon: tuple[float]) -> float:
     b_x, b_y = b_lat_lon
     return sqrt((a_x - b_x)**2 + (a_y - b_y)**2)
 
+def metres_to_degrees(metres: float) -> float:
+    """
+    An **approximate** conversion between metres to lat/lon degrees
+    e.g. Helpful if calculating a change in 20m results in a change in x degrees
+
+    Source: https://www.usna.edu/Users/oceano/pguth/md_help/html/approx_equivalents.htm
+    """
+    return metres / (111*10**3)
+
 if __name__ == "__main__":
     reader = MapReader()
     reader.get_highway_data_from_bbox(-33.83842,150.93879,-33.83621,150.94294)
