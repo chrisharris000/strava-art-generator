@@ -185,7 +185,7 @@ class MapReader:
         lat_lon = np.array(lat_lon)
         latitudes, longitudes = lat_lon[:, 0], lat_lon[:, 1]
 
-        plt.plot(longitudes, latitudes, "o")
+        plt.plot(longitudes, latitudes, ".")
         plt.xlabel("Longitude")
         plt.ylabel("Latitude")
         plt.axis("equal")
@@ -244,7 +244,7 @@ def metres_to_degrees(metres: float) -> float:
 
 if __name__ == "__main__":
     reader = MapReader()
-    reader.get_highway_data_from_bbox(-33.83842,150.93879,-33.83621,150.94294)
+    reader.get_highway_data_from_bbox(-33.837383,150.925664,-33.817704,150.962521)
     reader.extract_coordinates()
     reader.interpolate_nodes()
     reader.plot_response_data()
