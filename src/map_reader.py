@@ -17,7 +17,7 @@ class MapReader:
     """
     def __init__(self):
         self._overpass_url = "http://overpass-api.de/api/interpreter"
-        self._step_size = 10.0
+        self._step_size = 0.00055
         self._overpass_result = {}
         self._node_coordinates = {}
 
@@ -69,14 +69,76 @@ class MapReader:
 
         This method adds additional nodes space `_step_size` apart to fill in straight ways.
         """
+        modified_overpass_result = self._overpass_result.copy()
+
+        for element in self._overpass_result["elements"]:
+            if element["type"] != "way":
+                continue
+
+            way_nodes = element["nodes"]
+            way_id = element["id"]
+            new_way_nodes = way_nodes.copy()
+
+            for idx, curr_node in enumerate(way_nodes):
+                new_way_nodes.append(curr_node)
+
+                if idx == len(way_nodes) - 1:
+                    continue
+
+                next_node = way_nodes[idx + 1]
+                next_node_coord = self._node_coordinates.get(next_node, None)
+                curr_node_coord = self._node_coordinates.get(curr_node, None)
+
+                if not curr_node_coord:
+                    curr_node_data = self._get_node_lat_lon(curr_node)["elements"][0]
+                    curr_node_coord = [curr_node_data["lat"], curr_node_data["lon"]]
+
+                if not next_node_coord:
+                    next_node_data = self._get_node_lat_lon(next_node)["elements"][0]
+                    next_node_coord = [next_node_data["lat"], next_node_data["lon"]]
+
+                dist = distance(curr_node_coord, next_node_coord)
+
+                if dist > self.step_size:
+                    n_divisions = int((dist // self.step_size) + 1)
+                    additional_nodes_lat = np.linspace(curr_node_coord[0],
+                                                       next_node_coord[0],
+                                                       n_divisions)
+                    additional_nodes_lon = np.linspace(curr_node_coord[1],
+                                                       next_node_coord[1],
+                                                       n_divisions)
+                    additional_nodes = zip(additional_nodes_lat, additional_nodes_lon)
+                    additional_node_ids = [int(str(curr_node) + f"{sub_id:03}") \
+                                           for sub_id in range(len(additional_nodes_lat))]
+
+                    for additional_node_id, additional_node in zip(additional_node_ids,
+                                                                   additional_nodes):
+                        new_node = {
+                            "type": "node",
+                            "id": additional_node_id,
+                            "lat": additional_node[0],
+                            "lon": additional_node[1]
+                        }
+                        # add new node to end of elements
+                        modified_overpass_result["elements"].append(new_node)
+
+                        # add new node id to way
+                        new_way_nodes.append(additional_node_id)
+
+            new_way_nodes.append(way_nodes[-1]) # manually added since it is skipped in the loop
+
+            # assign new way nodes to result
+            for element in modified_overpass_result["elements"]:
+                if element["id"] == way_id:
+                    element["nodes"] = new_way_nodes
+            self._overpass_result = modified_overpass_result
 
     def plot_response_data(self) -> None:
         """
         Plot the lat/long of each node, nodes in ways and nodes in relations
         """
         lat_lon = []
-        for node in self._node_coordinates.items():
-            pair = self._node_coordinates[node]
+        for node, pair in self._node_coordinates.items():
             lat_lon.append(pair)
         lat_lon = np.array(lat_lon)
         latitudes, longitudes = lat_lon[:, 0], lat_lon[:, 1]
@@ -108,6 +170,19 @@ class MapReader:
                 lon = element["lon"]
                 self._node_coordinates[node_id] = tuple([lat, lon])
 
+    def _get_node_lat_lon(self, node_id: int) -> dict:
+        """
+        Get the lat, lon for a node given its id
+        """
+        query = f"""
+        [out:json];
+        (
+        node({node_id});
+        );
+        (._;>;);
+        out;"""
+        return self._query_overpass(query)
+
 def distance(a_lat_lon: tuple[float], b_lat_lon: tuple[float]) -> float:
     """
     Calculate the distance between 2 points
@@ -115,3 +190,12 @@ def distance(a_lat_lon: tuple[float], b_lat_lon: tuple[float]) -> float:
     a_x, a_y = a_lat_lon
     b_x, b_y = b_lat_lon
     return sqrt((a_x - b_x)**2 + (a_y - b_y)**2)
+
+if __name__ == "__main__":
+    reader = MapReader()
+    reader.get_highway_data_from_bbox(-33.837383,150.925664,-33.817704,150.962521)
+    print(len(reader._overpass_result["elements"]))
+    reader.interpolate_nodes()
+    print(len(reader._overpass_result["elements"]))
+    reader._extract_coordinates()
+    reader.plot_response_data()
