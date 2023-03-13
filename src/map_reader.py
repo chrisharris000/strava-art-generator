@@ -20,7 +20,7 @@ class MapReader:
     """
     def __init__(self):
         self._overpass_url = "http://overpass-api.de/api/interpreter"
-        self._step_size = 0.001
+        self._step_size = 0.0001
         self._overpass_result = {}
         self._node_coordinates = {}
         self._save_location = Path.home() / "strava-art-generator" / "osm-data"
@@ -156,6 +156,10 @@ class MapReader:
                         # add new node id to way
                         new_way_nodes.append(additional_node_id)
 
+                        # add new node to _node_coordinates
+                        self._node_coordinates[additional_node_id] = tuple([new_node["lat"],
+                                                                            new_node["lon"]])
+
             new_way_nodes.append(way_nodes[-1]) # manually added since it is skipped in the loop
 
             # assign new way nodes to result
@@ -187,16 +191,7 @@ class MapReader:
         plt.axis("equal")
         plt.show()
 
-    # Private methods
-    def _query_overpass(self, query: str, timeout: int=30) -> dict:
-        """
-        Send query to Overpass API and return json formatted result
-        """
-        response = requests.get(self._overpass_url, params={"data": query}, timeout=timeout)
-        response_data = response.json()
-        return response_data
-
-    def _extract_coordinates(self) -> None:
+    def extract_coordinates(self) -> None:
         """
         Extract the lat/lon of each node, nodes in ways and nodes in relations from the query result
         """
@@ -207,6 +202,15 @@ class MapReader:
                 lat = element["lat"]
                 lon = element["lon"]
                 self._node_coordinates[node_id] = tuple([lat, lon])
+
+    # Private methods
+    def _query_overpass(self, query: str, timeout: int=30) -> dict:
+        """
+        Send query to Overpass API and return json formatted result
+        """
+        response = requests.get(self._overpass_url, params={"data": query}, timeout=timeout)
+        response_data = response.json()
+        return response_data
 
     def _get_node_lat_lon(self, node_id: int) -> dict:
         """
@@ -231,10 +235,7 @@ def distance(a_lat_lon: tuple[float], b_lat_lon: tuple[float]) -> float:
 
 if __name__ == "__main__":
     reader = MapReader()
-    data_file = Path.home() / "strava-art-generator" / "osm-data" / "osm-output.json"
-    reader.get_highway_data_from_file(data_file)
-    print(len(reader._overpass_result["elements"]))
+    reader.get_highway_data_from_bbox(-33.83842,150.93879,-33.83621,150.94294)
+    reader.extract_coordinates()
     reader.interpolate_nodes()
-    print(len(reader._overpass_result["elements"]))
-    reader._extract_coordinates()
     reader.plot_response_data()
