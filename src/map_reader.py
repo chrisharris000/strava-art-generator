@@ -9,6 +9,7 @@ import json
 
 from math import sqrt
 from pathlib import Path
+from random import randint
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -101,6 +102,7 @@ class MapReader:
         This method adds additional nodes space `_step_size` apart to fill in straight ways.
         """
         modified_overpass_result = self._overpass_result.copy()
+        new_nodes = []
 
         for element in self._overpass_result["elements"]:
             if element["type"] != "way":
@@ -139,8 +141,13 @@ class MapReader:
                                                        next_node_coord[1],
                                                        n_divisions)
                     additional_nodes = zip(additional_nodes_lat, additional_nodes_lon)
-                    additional_node_ids = [int(str(curr_node) + f"{sub_id:03}") \
-                                           for sub_id in range(len(additional_nodes_lat))]
+                    # not a perfect method to get unique ids, but unlikely for overlaps
+                    random_ids = []
+                    n_digits = 10
+                    for _n in range(len(additional_nodes_lat)):
+                        random_ids.append(randint(10**(n_digits - 1), 10**(n_digits) - 1))
+                    additional_node_ids = [curr_node + random_id \
+                                           for random_id in random_ids]
 
                     for additional_node_id, additional_node in zip(additional_node_ids,
                                                                    additional_nodes):
@@ -223,7 +230,7 @@ class MapReader:
         );
         (._;>;);
         out;"""
-        return self._query_overpass(query)
+        return self._query_overpass(query)    
 
 def distance(a_lat_lon: tuple[float], b_lat_lon: tuple[float]) -> float:
     """
@@ -244,7 +251,8 @@ def metres_to_degrees(metres: float) -> float:
 
 if __name__ == "__main__":
     reader = MapReader()
-    reader.get_highway_data_from_bbox(-33.837383,150.925664,-33.817704,150.962521)
+    reader.step_size = metres_to_degrees(25)
+    reader.get_highway_data_from_bbox(-33.8338,150.9249,-33.8148,150.9643)
     reader.extract_coordinates()
     reader.interpolate_nodes()
     reader.plot_response_data()
