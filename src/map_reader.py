@@ -102,7 +102,6 @@ class MapReader:
         This method adds additional nodes space `_step_size` apart to fill in straight ways.
         """
         modified_overpass_result = self._overpass_result.copy()
-        new_nodes = []
 
         for element in self._overpass_result["elements"]:
             if element["type"] != "way":
@@ -230,7 +229,7 @@ class MapReader:
         );
         (._;>;);
         out;"""
-        return self._query_overpass(query)    
+        return self._query_overpass(query)
 
 def distance(a_lat_lon: tuple[float], b_lat_lon: tuple[float]) -> float:
     """
