@@ -250,8 +250,8 @@ def metres_to_degrees(metres: float) -> float:
 
 if __name__ == "__main__":
     reader = MapReader()
-    reader.step_size = metres_to_degrees(25)
-    reader.get_highway_data_from_bbox(-33.8338,150.9249,-33.8148,150.9643)
+    reader.step_size = metres_to_degrees(50)
+    reader.get_highway_data_from_bbox(-33.8259,150.9318,-33.8186,150.9428)
     reader.extract_coordinates()
     reader.interpolate_nodes()
     reader.plot_response_data()
